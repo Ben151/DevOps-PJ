@@ -32,6 +32,25 @@
             --scanline: transparent; /* אין פסי סריקה במצב בהיר */
         }
 
+        /* Dark theme = "night shift" */
+        :root[data-theme="dark"] { /* חל רק כשה-JS כותב data-theme="dark" על <html> */
+            --bg: #050a14; /* רקע כחול-חלל כהה מאוד */
+            --bg-grid: rgba(63, 216, 255, 0.07); /* קווי רשת בתכלת שקוף, כמו מכ"ם */
+            --panel: #0c1626; /* רקע לוחות: כחול כהה */
+            --panel-edge: #2f5175; /* מסגרות בכחול בינוני */
+            --ink: #eef8ff; /* טקסט ראשי כמעט לבן */
+            --ink-soft: #b4cbe0; /* טקסט משני בהיר: לא "אפור על אפור" */
+            --accent: #3fd8ff; /* הדגשה בתכלת זוהר */
+            --accent-ink: #001018; /* טקסט כהה על כפתור תכלת */
+            --readout: #8eecff; /* ספרות המונים בתכלת בהיר */
+            --ok: #4dff98; /* ירוק זוהר */
+            --danger: #ff3b52; /* אדום בהיר שבולט על רקע כהה */
+            --gauge-empty: #1b2b42; /* משבצת ריקה כהה */
+            --screen: #060d18; /* רקע מסך כהה */
+            --glow: rgba(63, 216, 255, 0.45); /* צבע הזוהר סביב מספרים וקווים */
+            --scanline: rgba(0, 0, 0, 0.18); /* פסי סריקה שחורים ושקופים */
+        }
+
         /* ===== Fonts: only fonts that already exist on Windows ===== */
         :root { /* משתני גופנים: מוגדרים פעם אחת ומשמשים בכל הדף */
             --font-head: "Bahnschrift", "Segoe UI", Arial, sans-serif; /* כותרות: גופן תעשייתי; עברית תיפול ל-Segoe UI */
@@ -533,6 +552,7 @@
                 <span class="tag" lang="en" dir="ltr">DOCKING BAY CONTROL</span> <!-- כיתוב באנגלית; lang ו-dir כדי שיוצג נכון בתוך דף RTL -->
             </div>
         </div>
+        <button id="theme-toggle" type="button">מצב כהה</button> <!-- כפתור המצב הכהה; ה-JS מחליף את הטקסט; type="button" כדי שלא ישלח טופס -->
     </header>
 
     <main> <!-- התוכן הראשי -->
@@ -611,10 +631,13 @@
         const DAILY_MAX_FEE = 80; // מקסימום ליום
         const MINUTES_PER_DAY = 24 * 60; // דקות ביום
 
+        const THEME_KEY = 'theme'; // המפתח שבו נשמרת בחירת המצב ב-localStorage
+
         const carsEl = document.getElementById('cars'); // הפניה לאזור הכרטיסים
         const statusEl = document.getElementById('status'); // הפניה לשורת הסטטוס
         const insideEl = document.getElementById('count-inside'); // הפניה למונה "חלליות בחניון"
         const freeEl = document.getElementById('count-free'); // הפניה למונה "מקומות פנויים"
+        const themeButton = document.getElementById('theme-toggle'); // הפניה לכפתור המצב
 
         // ---------- Vehicles ----------
 
@@ -715,7 +738,35 @@
             document.getElementById('fee-result').textContent = 'לתשלום: ' + fee + ' ₪'; // הצגת התוצאה
         });
 
+        // ---------- Dark mode ----------
+
+        function applyTheme(theme) { // מחילה מצב תצוגה
+            document.documentElement.dataset.theme = theme; // כותב data-theme על <html>, וה-CSS מחליף צבעים
+            themeButton.textContent = theme === 'dark' ? 'מצב בהיר' : 'מצב כהה'; // הכפתור מציע את המצב השני
+        }
+
+        function loadSavedTheme() { // קוראת את הבחירה השמורה
+            try { // localStorage עלול לזרוק שגיאה (למשל במצב פרטי)
+                return localStorage.getItem(THEME_KEY); // 'dark', 'light' או null
+            } catch { // אם נכשל
+                return null; // כאילו אין בחירה שמורה
+            }
+        }
+
+        themeButton.addEventListener('click', () => { // לחיצה על הכפתור
+            const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; // המצב ההפוך
+            applyTheme(next); // מחילים
+            try { // מנסים לשמור
+                localStorage.setItem(THEME_KEY, next); // שמירה לביקור הבא
+            } catch {
+                // Saving is optional; the toggle still works without it.
+            }
+        });
+
         // ---------- Start ----------
+
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches; // האם מערכת ההפעלה במצב כהה
+        applyTheme(loadSavedTheme() || (systemPrefersDark ? 'dark' : 'light')); // בחירה שמורה, ואם אין: לפי המערכת
 
         refresh(); // עדכון ראשון מיד
         setInterval(refresh, REFRESH_MS); // ואז כל 10 שניות
