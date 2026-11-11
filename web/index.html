@@ -1,10 +1,639 @@
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>חניון חכם</title>
+<!DOCTYPE html> <!-- מצהיר שזה מסמך HTML5, כדי שהדפדפן לא יעבור ל"מצב תאימות" ישן -->
+<html lang="he" dir="rtl"> <!-- שפת הדף עברית, וכיוון הכתיבה מימין לשמאל -->
+<head> <!-- אזור ההגדרות: לא מוצג למשתמש -->
+    <meta charset="UTF-8"> <!-- קידוד UTF-8 כדי שעברית וסימנים כמו ₪ יוצגו נכון -->
+    <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- רוחב הדף כרוחב המסך, בלי הקטנה בטלפון -->
+    <title>חניון חכם</title> <!-- הכותרת שמופיעה בלשונית הדפדפן -->
+    <style> /* כל העיצוב יושב כאן, בתוך הקובץ, בלי קובץ CSS חיצוני */
+        /* ===== Palette: every color lives here, nowhere else ===== */
+        :root { /* :root הוא אלמנט <html>; משתנים שמוגדרים כאן זמינים בכל הדף */
+            --hazard-a: #ffd400; /* צהוב של פסי אזהרה */
+            --hazard-b: #111111; /* שחור של פסי אזהרה */
+            --plate-bg: #ffd400; /* רקע צהוב כמו לוחית רישוי ישראלית */
+            --plate-ink: #000000; /* טקסט שחור על הלוחית: ניגודיות מקסימלית */
+            --alarm-bg: #b0001a; /* אדום כהה לרקע אזעקה: לבן עליו קריא מאוד */
+            --alarm-ink: #ffffff; /* טקסט לבן על רקע האזעקה */
+
+            /* Light theme = "day shift" */
+            --bg: #dde3ea; /* רקע הדף במצב בהיר: אפור-פלדה */
+            --bg-grid: rgba(6, 16, 31, 0.07); /* קווי רשת הרקע: כהים ושקופים מאוד */
+            --panel: #ffffff; /* רקע הלוחות: לבן */
+            --panel-edge: #7d8a9c; /* צבע מסגרות הלוחות */
+            --ink: #06101f; /* צבע הטקסט הראשי: כמעט שחור */
+            --ink-soft: #27364a; /* טקסט משני: עדיין כהה מספיק למקרן */
+            --accent: #00557f; /* צבע הדגשה: כחול-ים כהה */
+            --accent-ink: #ffffff; /* טקסט על רקע בצבע ההדגשה */
+            --readout: #06101f; /* צבע הספרות במונים */
+            --ok: #00703a; /* ירוק: מצב תקין */
+            --danger: #c4001a; /* אדום: מצב חירום */
+            --gauge-empty: #c3ccd8; /* צבע משבצת ריקה במד התפוסה */
+            --screen: #e9eef4; /* רקע "מסך" מאחורי תמונות ושדות קלט */
+            --glow: transparent; /* אין זוהר במצב בהיר: זוהר על רקע בהיר מוריד ניגודיות */
+            --scanline: transparent; /* אין פסי סריקה במצב בהיר */
+        }
+
+        /* ===== Fonts: only fonts that already exist on Windows ===== */
+        :root { /* משתני גופנים: מוגדרים פעם אחת ומשמשים בכל הדף */
+            --font-head: "Bahnschrift", "Segoe UI", Arial, sans-serif; /* כותרות: גופן תעשייתי; עברית תיפול ל-Segoe UI */
+            --font-body: "Segoe UI", Arial, sans-serif; /* טקסט רגיל: גופן המערכת של Windows */
+            --font-mono: Consolas, "Cascadia Mono", "Courier New", monospace; /* רוחב קבוע: למונים וללוחיות */
+        }
+
+        * { /* חל על כל האלמנטים */
+            box-sizing: border-box; /* רוחב אלמנט כולל ריפוד ומסגרת: חישובי גודל פשוטים יותר */
+        }
+
+        body { /* גוף הדף */
+            margin: 0; /* מבטל את השוליים שהדפדפן מוסיף כברירת מחדל */
+            min-height: 100vh; /* לפחות בגובה המסך, כדי שהכותרת התחתונה תהיה בתחתית */
+            display: flex; /* פריסת flex... */
+            flex-direction: column; /* ...בעמודה: כותרת, תוכן, כותרת תחתונה */
+            font-family: var(--font-body); /* גופן ברירת המחדל */
+            font-size: 20px; /* גודל בסיס גדול: קריא במקרן */
+            line-height: 1.5; /* מרווח שורות נוח לקריאה */
+            color: var(--ink); /* צבע טקסט מהפלטה */
+            background-color: var(--bg); /* צבע רקע מהפלטה */
+            background-image: /* רשת קווים בלי קובץ תמונה: */
+                linear-gradient(var(--bg-grid) 1px, transparent 1px), /* קו אופקי בעובי 1px */
+                linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px); /* קו אנכי בעובי 1px */
+            background-size: 40px 40px; /* גודל משבצת ברשת */
+        }
+
+        /* Screen scanlines (visible in dark mode only) */
+        body::before { /* שכבה מדומה מעל כל הדף */
+            content: ""; /* חובה כדי ש-::before ייווצר בכלל */
+            position: fixed; /* נשארת במקום גם בגלילה */
+            inset: 0; /* מכסה את כל המסך (top/right/bottom/left = 0) */
+            pointer-events: none; /* לא חוסמת לחיצות על מה שמתחת */
+            background: repeating-linear-gradient(to bottom, transparent 0 2px, var(--scanline) 2px 4px); /* פס שקוף 2px ופס כהה 2px, שוב ושוב */
+            z-index: 10; /* מעל התוכן */
+        }
+
+        h1, h2, .label { /* כותרות ותוויות */
+            font-family: var(--font-head); /* בגופן הכותרות */
+        }
+
+        /* Small English "instrument" captions */
+        .tag { /* כיתובים קטנים באנגלית, כמו על מכשירי מדידה */
+            font-family: var(--font-mono); /* רוחב קבוע: מראה טכני */
+            font-size: 0.75rem; /* קטן: זה קישוט, לא מידע מרכזי */
+            letter-spacing: 0.15em; /* ריווח אותיות רחב */
+            color: var(--accent); /* בצבע ההדגשה */
+        }
+
+        /* ===== Panel with corner brackets (pure CSS) ===== */
+        .panel { /* לוח עם "סוגרי פינה" */
+            --c: var(--accent); /* צבע הסוגרים (משתנה מקומי, אפשר להחליף לאדום) */
+            --l: 22px; /* אורך כל זרוע של סוגר */
+            --t: 4px; /* עובי הסוגר */
+            position: relative; /* בסיס למיקום אלמנטים פנימיים */
+            border: 2px solid var(--panel-edge); /* מסגרת דקה */
+            background: /* 8 מלבנים קטנים (2 לכל פינה) ומתחתם צבע הלוח: */
+                linear-gradient(var(--c) 0 0) top right / var(--l) var(--t), /* ימין-למעלה: קו אופקי */
+                linear-gradient(var(--c) 0 0) top right / var(--t) var(--l), /* ימין-למעלה: קו אנכי */
+                linear-gradient(var(--c) 0 0) top left / var(--l) var(--t), /* שמאל-למעלה: קו אופקי */
+                linear-gradient(var(--c) 0 0) top left / var(--t) var(--l), /* שמאל-למעלה: קו אנכי */
+                linear-gradient(var(--c) 0 0) bottom right / var(--l) var(--t), /* ימין-למטה: קו אופקי */
+                linear-gradient(var(--c) 0 0) bottom right / var(--t) var(--l), /* ימין-למטה: קו אנכי */
+                linear-gradient(var(--c) 0 0) bottom left / var(--l) var(--t), /* שמאל-למטה: קו אופקי */
+                linear-gradient(var(--c) 0 0) bottom left / var(--t) var(--l), /* שמאל-למטה: קו אנכי */
+                var(--panel); /* השכבה האחרונה: צבע הרקע של הלוח */
+            background-repeat: no-repeat; /* כל מלבן מצויר פעם אחת בלבד */
+            background-origin: border-box; /* הסוגרים צמודים לקצה החיצוני של המסגרת */
+        }
+
+        /* ===== Header (command bar) ===== */
+        .topbar { /* הפס העליון */
+            display: flex; /* פריטים בשורה */
+            flex-wrap: wrap; /* במסך צר הכפתור יורד שורה במקום לגלוש */
+            justify-content: space-between; /* הלוגו בצד אחד, הכפתור בצד השני */
+            align-items: center; /* מרכוז אנכי */
+            gap: 16px; /* רווח בין הפריטים */
+            padding: 14px 24px; /* ריפוד פנימי */
+            background: var(--panel); /* רקע כמו לוח */
+            border-bottom: 4px solid var(--accent); /* קו הדגשה תחתון */
+        }
+
+        .brand { /* הסמל + שם המערכת */
+            display: flex; /* בשורה */
+            align-items: center; /* מרכוז אנכי */
+            gap: 16px; /* רווח בין הסמל לטקסט */
+        }
+
+        .emblem { /* סמל טבעת העגינה */
+            width: 56px; /* רוחב */
+            height: 56px; /* גובה */
+            flex-shrink: 0; /* לא מתכווץ במסך צר */
+            color: var(--accent); /* ה-SVG משתמש ב-currentColor, אז הצבע נקבע כאן */
+            filter: drop-shadow(0 0 6px var(--glow)); /* זוהר סביב הקווים (רק במצב כהה) */
+        }
+
+        h1 { /* כותרת ראשית */
+            margin: 0; /* בלי שוליים מיותרים */
+            font-size: 2.2rem; /* גדולה */
+            line-height: 1.1; /* צפופה, כדי שהכיתוב האנגלי יישב קרוב אליה */
+        }
+
+        button { /* כל הכפתורים בדף */
+            font: inherit; /* כפתורים לא יורשים גופן כברירת מחדל, אז מכריחים */
+            font-family: var(--font-head); /* בגופן הכותרות */
+            font-weight: bold; /* מודגש */
+            padding: 10px 26px; /* כפתור גדול: קל ללחוץ */
+            border: none; /* בלי מסגרת ברירת מחדל */
+            background: var(--accent); /* רקע בצבע ההדגשה */
+            color: var(--accent-ink); /* טקסט בצבע מנוגד */
+            cursor: pointer; /* סמן "יד" במעבר עכבר */
+            clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); /* חותך שתי פינות באלכסון: מראה של מתג בלוח בקרה */
+        }
+
+        button:hover { /* במעבר עכבר */
+            filter: brightness(1.15); /* מבהיר קצת: משוב ויזואלי בלי צבע נוסף */
+        }
+
+        :focus-visible { /* אלמנט שנבחר עם מקלדת */
+            outline: 4px solid var(--accent); /* מסגרת עבה שרואים */
+            outline-offset: 3px; /* קצת מרחק מהאלמנט */
+        }
+
+        main { /* התוכן הראשי */
+            flex: 1; /* תופס את כל הגובה הפנוי: דוחף את הכותרת התחתונה למטה */
+            width: 100%; /* רוחב מלא... */
+            max-width: 1400px; /* ...אבל לא יותר מ-1400px במסך ענק */
+            margin: 0 auto; /* מרכוז אופקי */
+            padding: 24px 16px; /* ריפוד; 16px בצדדים כדי שלא ייצמד לקצה בטלפון */
+        }
+
+        /* ===== Full-lot alarm (hidden until body has .is-full) ===== */
+        .full-alert { /* באנר "החניון מלא" */
+            display: none; /* מוסתר כברירת מחדל */
+            flex-wrap: wrap; /* במסך צר הסמל והטקסט יורדים שורה */
+            align-items: center; /* מרכוז אנכי */
+            justify-content: center; /* מרכוז אופקי */
+            gap: 24px; /* רווח בין הסמל לטקסט */
+            margin-bottom: 24px; /* רווח מתחת לבאנר */
+            padding: 22px 16px; /* ריפוד פנימי */
+            text-align: center; /* טקסט ממורכז */
+            color: var(--alarm-ink); /* טקסט לבן */
+            background: var(--alarm-bg); /* רקע אדום */
+            border-top: 14px solid transparent; /* מקום לפס האזהרה העליון */
+            border-bottom: 14px solid transparent; /* מקום לפס האזהרה התחתון */
+            border-image: repeating-linear-gradient(-45deg, var(--hazard-a) 0 16px, var(--hazard-b) 16px 32px) 14; /* ממלא את הגבולות בפסים אלכסוניים צהוב-שחור */
+            animation: alarm-flash 1s steps(1) infinite; /* הבהוב פעם בשנייה; steps(1) = החלפה חדה, כמו נורה */
+        }
+
+        .is-full .full-alert { /* כשל-body יש is-full */
+            display: flex; /* הבאנר מופיע */
+        }
+
+        .full-alert svg { /* סמל המשולש */
+            width: 84px; /* רוחב */
+            height: 84px; /* גובה */
+            flex-shrink: 0; /* לא מתכווץ */
+        }
+
+        .hz-sign { /* גוף המשולש */
+            fill: var(--hazard-a); /* מילוי צהוב */
+            stroke: var(--hazard-b); /* קו מתאר שחור */
+        }
+
+        .hz-mark { /* הקו של סימן הקריאה */
+            stroke: var(--hazard-b); /* שחור */
+        }
+
+        .hz-dot { /* הנקודה של סימן הקריאה */
+            fill: var(--hazard-b); /* שחורה */
+        }
+
+        .full-alert strong { /* "החניון מלא" */
+            display: block; /* שורה נפרדת */
+            font-family: var(--font-head); /* גופן כותרות */
+            font-size: clamp(2.4rem, 7vw, 4.5rem); /* ענק, וגדל עם המסך בין 2.4 ל-4.5rem */
+            line-height: 1; /* צפוף */
+            letter-spacing: 0.04em; /* מעט ריווח */
+        }
+
+        .full-alert span { /* שורת ההסבר */
+            display: block; /* שורה נפרדת */
+            margin-top: 8px; /* רווח מהכותרת */
+            font-size: 1.3rem; /* גדולה מספיק לקריאה מרחוק */
+            font-weight: bold; /* מודגשת */
+        }
+
+        @keyframes alarm-flash { /* הגדרת אנימציית ההבהוב */
+            50% { /* באמצע כל מחזור... */
+                background: var(--danger); /* ...הרקע מתחלף לאדום הבהיר */
+            }
+        }
+
+        /* Red pulsing frame around the whole screen when full */
+        .is-full::after { /* מסגרת סביב כל המסך, רק כשהחניון מלא */
+            content: ""; /* חובה כדי ש-::after ייווצר */
+            position: fixed; /* צמודה למסך, נשארת בגלילה */
+            inset: 0; /* מכסה את כל המסך */
+            pointer-events: none; /* לא חוסמת לחיצות */
+            border: 10px solid var(--danger); /* מסגרת אדומה עבה */
+            z-index: 11; /* מעל פסי הסריקה (10) */
+            animation: frame-pulse 1s ease-in-out infinite alternate; /* פעימה הלוך-חזור */
+        }
+
+        @keyframes frame-pulse { /* אנימציית פעימה: משמשת בכמה מקומות */
+            from { /* התחלה */
+                opacity: 1; /* גלוי לגמרי */
+            }
+            to { /* סוף */
+                opacity: 0.25; /* כמעט שקוף */
+            }
+        }
+
+        /* ===== Counters: the biggest thing on the screen ===== */
+        .stats { /* אזור שני המונים */
+            display: grid; /* רשת */
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); /* כמה עמודות שנכנסות, כל אחת לפחות 320px (או 100% במסך צר) */
+            gap: 20px; /* רווח בין הלוחות */
+        }
+
+        .stat { /* לוח מונה בודד */
+            padding: 20px 24px 24px; /* ריפוד: למעלה, צדדים, למטה */
+            text-align: center; /* הכול ממורכז */
+        }
+
+        .label { /* תווית ("חלליות בחניון") */
+            display: block; /* שורה נפרדת */
+            font-size: 1.6rem; /* גדולה */
+            font-weight: bold; /* מודגשת */
+            color: var(--ink-soft); /* צבע משני, כדי שהמספר יבלוט יותר */
+        }
+
+        .stat-value { /* המספר עצמו */
+            display: block; /* שורה נפרדת */
+            font-family: var(--font-mono); /* רוחב קבוע: מראה של מכשיר מדידה */
+            font-size: clamp(5rem, 13vw, 10rem); /* הדבר הכי גדול בדף: 5-10rem לפי רוחב המסך */
+            font-weight: bold; /* עבה */
+            line-height: 1; /* בלי רווח מיותר מעל ומתחת */
+            font-variant-numeric: tabular-nums; /* כל הספרות באותו רוחב: המספר לא "קופץ" */
+            color: var(--readout); /* צבע הקריאה */
+            text-shadow: 0 0 18px var(--glow); /* זוהר (רק במצב כהה) */
+        }
+
+        .stat-free .stat-value { /* המספר של "מקומות פנויים" */
+            color: var(--ok); /* ירוק: יש מקום */
+        }
+
+        .is-full .stat-free { /* לוח "מקומות פנויים" כשהחניון מלא */
+            --c: var(--danger); /* הסוגרים הופכים לאדומים */
+            border-color: var(--danger); /* וגם המסגרת */
+        }
+
+        .is-full .stat-free .stat-value { /* המספר 0 כשהחניון מלא */
+            color: var(--danger); /* אדום */
+            animation: frame-pulse 1s ease-in-out infinite alternate; /* ופועם */
+        }
+
+        /* Occupancy gauge: 20 segments drawn with CSS */
+        .gauge { /* לוח מד התפוסה */
+            margin-top: 20px; /* רווח מהמונים */
+            padding: 16px 24px; /* ריפוד */
+        }
+
+        .gauge-track { /* המסילה של המד */
+            position: relative; /* בסיס למיקום המחיצות (::after) */
+            height: 30px; /* גובה */
+            margin-top: 8px; /* רווח מהתווית */
+            background: var(--gauge-empty); /* צבע החלק הריק */
+        }
+
+        .gauge-fill { /* החלק המלא */
+            height: 100%; /* בגובה המסילה */
+            width: calc(var(--fill, 0) * 100%); /* --fill (0 עד 1) מגיע מה-JS; 0 אם עוד לא נקבע */
+            background: var(--accent); /* צבע מילוי */
+            box-shadow: 0 0 14px var(--glow); /* זוהר */
+            transition: width 0.6s ease; /* שינוי רוחב חלק, לא קפיצה */
+        }
+
+        .is-full .gauge-fill { /* כשהחניון מלא */
+            background: var(--danger); /* המד אדום */
+        }
+
+        .gauge-track::after { /* המחיצות בין המשבצות */
+            content: ""; /* חובה */
+            position: absolute; /* מעל המסילה */
+            inset: 0; /* בגודל המסילה */
+            background: repeating-linear-gradient(to left, transparent 0 calc(5% - 4px), var(--panel) calc(5% - 4px) 5%); /* כל 5% קו בצבע הלוח = 20 משבצות */
+        }
+
+        /* ===== Status line ===== */
+        .status { /* שורת הסטטוס */
+            display: flex; /* נורית + טקסט בשורה */
+            align-items: center; /* מרכוז אנכי */
+            gap: 12px; /* רווח בין הנורית לטקסט */
+            margin: 20px 0; /* רווח מעל ומתחת */
+            font-weight: bold; /* מודגש */
+            color: var(--ink-soft); /* צבע משני */
+        }
+
+        .status::before { /* הנורית */
+            content: ""; /* חובה */
+            width: 16px; /* רוחב */
+            height: 16px; /* גובה */
+            flex-shrink: 0; /* לא מתכווצת */
+            border-radius: 50%; /* עיגול */
+            background: var(--ok); /* ירוקה: הכול תקין */
+            box-shadow: 0 0 10px var(--ok); /* זוהר ירוק */
+        }
+
+        .status.loading::before { /* בזמן טעינה */
+            background: var(--accent); /* נורית תכלת */
+            box-shadow: 0 0 10px var(--accent); /* זוהר תכלת */
+            animation: frame-pulse 0.6s infinite alternate; /* מהבהבת */
+        }
+
+        .status.error { /* כשהשרת לא זמין */
+            padding: 16px 20px; /* ריפוד: הופך לפס בולט */
+            color: var(--alarm-ink); /* טקסט לבן */
+            background: var(--alarm-bg); /* רקע אדום */
+            border-inline-start: 14px solid var(--hazard-a); /* פס צהוב בצד ההתחלה (ימין ב-RTL) */
+        }
+
+        .status.error::before { /* הנורית בזמן שגיאה */
+            background: var(--alarm-ink); /* לבנה (אדום על אדום לא היה נראה) */
+            box-shadow: none; /* בלי זוהר */
+            animation: frame-pulse 0.6s infinite alternate; /* מהבהבת */
+        }
+
+        /* ===== Vehicle bays ===== */
+        h2 { /* כותרות משנה */
+            display: flex; /* טקסט + קו בשורה */
+            align-items: center; /* מרכוז אנכי */
+            gap: 14px; /* רווח בין הטקסט לקו */
+            margin: 32px 0 16px; /* רווח מעל ומתחת */
+            font-size: 1.8rem; /* גדולה */
+        }
+
+        h2::after { /* קו אחרי הכותרת */
+            content: ""; /* חובה */
+            flex: 1; /* ממלא את כל הרוחב שנשאר */
+            height: 2px; /* קו דק */
+            background: var(--panel-edge); /* בצבע המסגרות */
+        }
+
+        .cars { /* רשת הכרטיסים */
+            display: grid; /* רשת */
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); /* כמה כרטיסים שנכנסים, כל אחד לפחות 230px */
+            gap: 16px; /* רווח בין כרטיסים */
+            counter-reset: bay; /* מאפס מונה CSS בשם bay למספור המפרצים */
+        }
+
+        /* Shown by CSS alone when the list is empty and there is no error */
+        .status:not(.error):not(.loading) ~ .cars:empty::before { /* רשימה ריקה, והסטטוס שלפניה לא שגיאה ולא טעינה */
+            content: "המפרץ ריק — אין חלליות בחניון"; /* ההודעה */
+            grid-column: 1 / -1; /* תופסת את כל רוחב הרשת */
+            padding: 32px; /* ריפוד */
+            text-align: center; /* ממורכזת */
+            font-size: 1.4rem; /* גדולה */
+            font-weight: bold; /* מודגשת */
+            color: var(--ink-soft); /* צבע משני */
+            border: 3px dashed var(--panel-edge); /* מסגרת מקווקוות: "מקום ריק" */
+        }
+
+        .car { /* כרטיס רכב (figure) */
+            margin: 0; /* figure מקבל שוליים כברירת מחדל: מבטלים */
+            min-width: 0; /* מאפשר לכרטיס להתכווץ בתוך הרשת */
+            counter-increment: bay; /* כל כרטיס מעלה את המונה ב-1 */
+            background: var(--panel); /* רקע לוח */
+            border: 2px solid var(--panel-edge); /* מסגרת */
+            border-top: 6px solid var(--accent); /* פס עליון עבה בצבע ההדגשה */
+        }
+
+        .car::before { /* תווית "BAY 01" */
+            content: "BAY " counter(bay, decimal-leading-zero); /* הטקסט + ערך המונה בשתי ספרות */
+            display: block; /* שורה נפרדת */
+            padding: 4px 12px; /* ריפוד */
+            font-family: var(--font-mono); /* רוחב קבוע */
+            font-size: 0.8rem; /* קטן */
+            letter-spacing: 0.15em; /* ריווח */
+            color: var(--accent); /* צבע הדגשה */
+            direction: ltr; /* טקסט באנגלית: משמאל לימין */
+            text-align: left; /* מיושר לשמאל */
+        }
+
+        .car img { /* תמונת הלוחית */
+            display: block; /* מבטל רווח מיותר מתחת לתמונה */
+            width: 100%; /* ברוחב הכרטיס */
+            height: 150px; /* גובה קבוע: כל הכרטיסים באותו גובה */
+            object-fit: contain; /* התמונה נכנסת כולה בלי להימתח או להיחתך */
+            background: var(--screen); /* רקע מאחורי התמונה */
+        }
+
+        .car figcaption { /* שם הלוחית */
+            margin: 12px; /* רווח מהקצוות */
+            padding: 6px 8px; /* ריפוד */
+            text-align: center; /* ממורכז */
+            font-family: var(--font-mono); /* רוחב קבוע: מראה של לוחית */
+            font-size: 1.3rem; /* גדול */
+            font-weight: bold; /* מודגש */
+            letter-spacing: 0.08em; /* ריווח קל בין תווים */
+            color: var(--plate-ink); /* טקסט שחור */
+            background: var(--plate-bg); /* רקע צהוב */
+            border: 3px solid var(--plate-ink); /* מסגרת שחורה כמו בלוחית */
+            border-radius: 6px; /* פינות מעוגלות קלות */
+            overflow-wrap: anywhere; /* שם ארוך נשבר לשורות במקום לשבור את הפריסה */
+        }
+
+        /* ===== Footer: crew credit ===== */
+        .crew { /* הכותרת התחתונה */
+            display: flex; /* סמל + טקסט בשורה */
+            justify-content: center; /* ממורכז */
+            align-items: center; /* מרכוז אנכי */
+            gap: 16px; /* רווח */
+            padding: 18px 16px; /* ריפוד */
+            background: var(--panel); /* רקע לוח */
+            border-top: 4px solid var(--accent); /* קו עליון: סימטרי לפס העליון */
+        }
+
+        .crew svg { /* טלאי המשימה */
+            width: 52px; /* רוחב */
+            height: 52px; /* גובה */
+            flex-shrink: 0; /* לא מתכווץ */
+            color: var(--accent); /* צבע הסמל (currentColor) */
+        }
+
+        .crew .tag { /* "צוות המשימה" */
+            font-family: var(--font-head); /* גופן כותרות, כי בגופן ה-mono העברית נראית דקה */
+        }
+
+        .crew-names { /* "Azimi & Ben" */
+            display: block; /* שורה נפרדת */
+            font-family: var(--font-head); /* גופן כותרות */
+            font-size: 1.6rem; /* גדול */
+            font-weight: bold; /* מודגש */
+            line-height: 1.1; /* צפוף */
+        }
+
+        /* Turn off motion for users who asked the OS for less of it */
+        @media (prefers-reduced-motion: reduce) { /* רק אם המשתמש ביקש במערכת ההפעלה פחות תנועה */
+            *, *::before, *::after { /* כל האלמנטים וכל האלמנטים המדומים */
+                animation: none !important; /* מבטל אנימציות; !important גובר על כל כלל אחר */
+                transition: none !important; /* מבטל מעברים */
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>חניון חכם</h1>
+    <header class="topbar"> <!-- הפס העליון -->
+        <div class="brand"> <!-- סמל + שם המערכת -->
+            <svg class="emblem" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"> <!-- SVG מוטבע: בלי קובץ תמונה; aria-hidden כי זה קישוט -->
+                <circle cx="32" cy="32" r="28"/> <!-- טבעת חיצונית -->
+                <circle cx="32" cy="32" r="16" stroke-dasharray="6 4"/> <!-- טבעת פנימית מקווקוות -->
+                <circle cx="32" cy="32" r="4" fill="currentColor"/> <!-- נקודת מרכז מלאה -->
+                <path d="M32 0v12M32 52v12M0 32h12M52 32h12"/> <!-- ארבעה קווי כוונת: למעלה, למטה, שמאל, ימין -->
+            </svg>
+            <div> <!-- עוטף את הכותרת והכיתוב שמתחתיה -->
+                <h1>חניון חכם</h1> <!-- כותרת ראשית -->
+                <span class="tag" lang="en" dir="ltr">DOCKING BAY CONTROL</span> <!-- כיתוב באנגלית; lang ו-dir כדי שיוצג נכון בתוך דף RTL -->
+            </div>
+        </div>
+    </header>
+
+    <main> <!-- התוכן הראשי -->
+        <div class="full-alert" role="alert"> <!-- באנר "החניון מלא"; מוסתר ב-CSS עד שיש is-full; role="alert" לקוראי מסך -->
+            <svg viewBox="0 0 64 64" aria-hidden="true"> <!-- משולש אזהרה -->
+                <path class="hz-sign" d="M32 4 62 58H2Z" stroke-width="3"/> <!-- המשולש: שלוש נקודות וסגירה (Z) -->
+                <path class="hz-mark" d="M32 22v18" stroke-width="7" stroke-linecap="round"/> <!-- הקו של סימן הקריאה -->
+                <circle class="hz-dot" cx="32" cy="50" r="4"/> <!-- הנקודה של סימן הקריאה -->
+            </svg>
+            <div> <!-- עוטף את שתי שורות הטקסט -->
+                <strong>החניון מלא</strong> <!-- כותרת האזעקה -->
+                <span>אין מקומות פנויים — לא לאשר כניסת חלליות</span> <!-- הנחיה לשומר -->
+            </div>
+        </div>
+
+        <section class="stats"> <!-- אזור המונים -->
+            <div class="stat panel"> <!-- לוח "חלליות בחניון" -->
+                <span class="label">חלליות בחניון</span> <!-- תווית -->
+                <span id="count-inside" class="stat-value">—</span> <!-- המספר; ה-JS מחליף את "—" לפי ה-id -->
+                <span class="tag" lang="en" dir="ltr">VEHICLES DOCKED</span> <!-- כיתוב מכשיר -->
+            </div>
+            <div class="stat stat-free panel"> <!-- לוח "מקומות פנויים"; stat-free מאפשר לצבוע אותו אחרת -->
+                <span class="label">מקומות פנויים</span> <!-- תווית -->
+                <span id="count-free" class="stat-value">—</span> <!-- המספר; ה-JS ממלא -->
+                <span class="tag" lang="en" dir="ltr">BAYS AVAILABLE</span> <!-- כיתוב מכשיר -->
+            </div>
+        </section>
+
+        <div class="gauge panel"> <!-- לוח מד התפוסה -->
+            <span class="label">תפוסת החניון</span> <!-- תווית -->
+            <div class="gauge-track"> <!-- המסילה -->
+                <div class="gauge-fill"></div> <!-- החלק המלא; הרוחב נקבע מ---fill -->
+            </div>
+        </div>
+
+        <p id="status" class="status loading" role="status">טוען נתונים…</p> <!-- שורת הסטטוס; loading עד העדכון הראשון; role="status" לקוראי מסך -->
+
+        <h2>חלליות בעגינה</h2> <!-- כותרת אזור החלליות -->
+        <section id="cars" class="cars"></section> <!-- כאן ה-JS יוצר כרטיס לכל רכב; חייב להישאר ריק כדי ש-:empty יעבוד -->
+    </main>
+
+    <footer class="crew"> <!-- כותרת תחתונה: קרדיט הצוות -->
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"> <!-- טלאי משימה -->
+            <path d="M32 3 58 16v18c0 14-11 23-26 27C17 57 6 48 6 34V16Z"/> <!-- צורת מגן: קווים ישרים וקימורים (c, C) -->
+            <path d="M32 16l4 9 10 1-7.5 7 2 10L32 38l-8.5 5 2-10L18 26l10-1Z" fill="currentColor"/> <!-- כוכב מלא באמצע המגן -->
+        </svg>
+        <div> <!-- עוטף את הטקסט -->
+            <span class="tag">צוות המשימה · <span lang="en" dir="ltr">MISSION CREW</span></span> <!-- כותרת קטנה -->
+            <span class="crew-names" lang="en" dir="ltr">Azimi &amp; Ben</span> <!-- שמות הצוות; &amp; = התו & ב-HTML -->
+        </div>
+    </footer>
+
+    <script> // הסקריפט בסוף ה-body: כל האלמנטים כבר קיימים כשהוא רץ
+        const TOTAL_SPOTS = 20; // קיבולת החניון
+        const REFRESH_MS = 10000; // רענון כל 10 שניות (במילישניות)
+        const PLATES_URL = '/plates/'; // הנתיב ש-Nginx מעביר לשרת האחסון
+        const IMAGE_PATTERN = /^[^/?#]+\.(jpe?g|png|gif|webp)$/i; // שם קובץ פשוט עם סיומת תמונה; i = בלי תלות באותיות גדולות
+
+        const carsEl = document.getElementById('cars'); // הפניה לאזור הכרטיסים
+        const statusEl = document.getElementById('status'); // הפניה לשורת הסטטוס
+        const insideEl = document.getElementById('count-inside'); // הפניה למונה "חלליות בחניון"
+        const freeEl = document.getElementById('count-free'); // הפניה למונה "מקומות פנויים"
+
+        // ---------- Vehicles ----------
+
+        async function loadPlates() { // מביאה את רשימת התמונות; async כי היא מחכה לרשת
+            const response = await fetch(PLATES_URL, { // בקשת HTTP לרשימת הקבצים של Apache
+                cache: 'no-store', // בלי מטמון: תמיד רשימה עדכנית
+                signal: AbortSignal.timeout(5000), // מבטל את הבקשה אחרי 5 שניות
+            });
+            if (!response.ok) { // אם הסטטוס לא 2xx (למשל 502)
+                throw new Error('HTTP ' + response.status); // זורקים שגיאה, ו-refresh תתפוס אותה
+            }
+
+            const html = await response.text(); // תוכן הדף כטקסט
+            const doc = new DOMParser().parseFromString(html, 'text/html'); // הופך את הטקסט למסמך "מת": בלי להריץ סקריפטים
+
+            const names = new Set(); // Set מונע שמות כפולים
+            for (const link of doc.querySelectorAll('a[href]')) { // עובר על כל הקישורים ברשימה
+                const href = link.getAttribute('href'); // הכתובת כפי שנכתבה (לא כתובת מלאה)
+                if (IMAGE_PATTERN.test(href)) { // רק אם זה קובץ תמונה
+                    names.add(decodeURIComponent(href)); // מפענח תווים מקודדים (למשל %20) ומוסיף
+                }
+            }
+            return [...names]; // ממיר את ה-Set למערך
+        }
+
+        function renderCars(names) { // מציירת כרטיס לכל רכב
+            const cards = names.map((name) => { // לכל שם: יוצרים כרטיס
+                const card = document.createElement('figure'); // figure = תמונה + כיתוב
+                card.className = 'car'; // מחלקת העיצוב
+
+                const img = document.createElement('img'); // אלמנט תמונה
+                img.src = PLATES_URL + encodeURIComponent(name); // כתובת התמונה; encode מונע שבירה מתווים מיוחדים
+                img.alt = 'לוחית רישוי ' + name; // טקסט חלופי לקוראי מסך
+
+                const caption = document.createElement('figcaption'); // הכיתוב
+                caption.textContent = name.replace(/\.[^.]+$/, ''); // השם בלי הסיומת; textContent מונע XSS
+
+                card.append(img, caption); // מכניס תמונה וכיתוב לכרטיס
+                return card; // מחזיר את הכרטיס למערך
+            });
+            carsEl.replaceChildren(...cards); // מחליף את כל הכרטיסים הישנים בחדשים בפעולה אחת
+        }
+
+        function renderCounters(inside) { // מעדכנת את המונים
+            insideEl.textContent = inside; // מספר הרכבים
+            freeEl.textContent = Math.max(TOTAL_SPOTS - inside, 0); // מקומות פנויים, לא פחות מ-0
+            // Design only: drive the gauge width and the "lot full" alarm.
+            document.body.style.setProperty('--fill', Math.min(inside / TOTAL_SPOTS, 1)); // אחוז התפוסה (0 עד 1) למד ב-CSS
+            document.body.classList.toggle('is-full', inside >= TOTAL_SPOTS); // מוסיף is-full אם החניון מלא, אחרת מסיר
+        }
+
+        function showError() { // מצב שגיאה: השרת לא זמין
+            carsEl.replaceChildren(); // מנקה את הכרטיסים: לא מציגים מידע ישן
+            insideEl.textContent = '—'; // "אין נתון"
+            freeEl.textContent = '—'; // "אין נתון"
+            // Design only: no data, so no gauge and no "lot full" alarm.
+            document.body.style.setProperty('--fill', 0); // מאפס את המד
+            document.body.classList.remove('is-full'); // מכבה את אזעקת "חניון מלא"
+            statusEl.className = 'status error'; // מעבר לעיצוב שגיאה
+            statusEl.textContent = 'שרת האחסון אינו זמין כרגע. ננסה שוב בעוד ' // תחילת ההודעה
+                + (REFRESH_MS / 1000) + ' שניות.'; // מספר השניות מחושב מהקבוע
+        }
+
+        async function refresh() { // מחזור עדכון אחד
+            try { // מנסים...
+                const names = await loadPlates(); // מביאים את הרשימה
+                renderCars(names); // מציירים כרטיסים
+                renderCounters(names.length); // מעדכנים מונים
+                statusEl.className = 'status'; // עיצוב רגיל (מסיר loading/error)
+                statusEl.textContent = 'עודכן לאחרונה: ' + new Date().toLocaleTimeString('he-IL'); // שעת העדכון בפורמט ישראלי
+            } catch (error) { // ...ואם משהו נכשל
+                console.error(error); // רושמים לקונסול לצורך דיבאג
+                showError(); // מציגים מצב שגיאה
+            }
+        }
+
+        // ---------- Start ----------
+
+        refresh(); // עדכון ראשון מיד
+        setInterval(refresh, REFRESH_MS); // ואז כל 10 שניות
+    </script>
 </body>
 </html>
