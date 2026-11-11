@@ -439,6 +439,47 @@
             overflow-wrap: anywhere; /* שם ארוך נשבר לשורות במקום לשבור את הפריסה */
         }
 
+        /* ===== Fee calculator ===== */
+        .calculator { /* לוח המחשבון */
+            margin-top: 32px; /* רווח מעליו */
+            padding: 8px 24px 20px; /* ריפוד */
+        }
+
+        #fee-form { /* הטופס */
+            display: flex; /* שדות בשורה */
+            flex-wrap: wrap; /* יורדים שורה במסך צר */
+            align-items: flex-end; /* מיושרים לתחתית, כדי שהכפתור יהיה בגובה השדות */
+            gap: 16px; /* רווח */
+        }
+
+        #fee-form label { /* תווית + שדה */
+            display: flex; /* flex... */
+            flex-direction: column; /* ...בעמודה: התווית מעל השדה */
+            font-weight: bold; /* מודגש */
+        }
+
+        #fee-form input { /* שדות המספרים */
+            width: 130px; /* רוחב */
+            padding: 8px; /* ריפוד */
+            font: inherit; /* שדות לא יורשים גופן כברירת מחדל */
+            font-family: var(--font-mono); /* מספרים ברוחב קבוע */
+            color: var(--ink); /* צבע טקסט */
+            background: var(--screen); /* רקע מסך */
+            border: 2px solid var(--panel-edge); /* מסגרת */
+        }
+
+        .fee-result { /* "לתשלום: X ₪" */
+            font-family: var(--font-head); /* גופן כותרות (Consolas חסר עברית) */
+            font-size: 2.2rem; /* גדול */
+            font-weight: bold; /* מודגש */
+            font-variant-numeric: tabular-nums; /* ספרות ברוחב שווה */
+            color: var(--accent); /* צבע הדגשה */
+        }
+
+        .fee-rules { /* שורת התעריפים */
+            color: var(--ink-soft); /* צבע משני */
+        }
+
         /* ===== Footer: crew credit ===== */
         .crew { /* הכותרת התחתונה */
             display: flex; /* סמל + טקסט בשורה */
@@ -531,6 +572,21 @@
 
         <h2>חלליות בעגינה</h2> <!-- כותרת אזור החלליות -->
         <section id="cars" class="cars"></section> <!-- כאן ה-JS יוצר כרטיס לכל רכב; חייב להישאר ריק כדי ש-:empty יעבוד -->
+
+        <section class="calculator panel"> <!-- מחשבון התשלום -->
+            <h2>מחשבון תשלום</h2> <!-- כותרת -->
+            <form id="fee-form"> <!-- הטופס; ה-JS מאזין לשליחה שלו -->
+                <label>שעות <!-- תווית שעוטפת את השדה: לחיצה עליה מפעילה את השדה -->
+                    <input id="fee-hours" type="number" min="0" value="0" required> <!-- שדה מספרי, לא שלילי, חובה -->
+                </label>
+                <label>דקות <!-- תווית הדקות -->
+                    <input id="fee-minutes" type="number" min="0" max="59" value="0" required> <!-- 0 עד 59 דקות -->
+                </label>
+                <button type="submit">חשב</button> <!-- שולח את הטופס, וה-JS מחשב -->
+            </form>
+            <p id="fee-result" class="fee-result"></p> <!-- כאן יופיע הסכום -->
+            <p id="fee-rules" class="fee-rules"></p> <!-- כאן ה-JS כותב את התעריפים -->
+        </section>
     </main>
 
     <footer class="crew"> <!-- כותרת תחתונה: קרדיט הצוות -->
@@ -549,6 +605,11 @@
         const REFRESH_MS = 10000; // רענון כל 10 שניות (במילישניות)
         const PLATES_URL = '/plates/'; // הנתיב ש-Nginx מעביר לשרת האחסון
         const IMAGE_PATTERN = /^[^/?#]+\.(jpe?g|png|gif|webp)$/i; // שם קובץ פשוט עם סיומת תמונה; i = בלי תלות באותיות גדולות
+
+        const FIRST_HOUR_FEE = 12; // מחיר השעה הראשונה
+        const EXTRA_HOUR_FEE = 8; // מחיר כל שעה נוספת
+        const DAILY_MAX_FEE = 80; // מקסימום ליום
+        const MINUTES_PER_DAY = 24 * 60; // דקות ביום
 
         const carsEl = document.getElementById('cars'); // הפניה לאזור הכרטיסים
         const statusEl = document.getElementById('status'); // הפניה לשורת הסטטוס
@@ -629,6 +690,30 @@
                 showError(); // מציגים מצב שגיאה
             }
         }
+
+        // ---------- Fee calculator ----------
+
+        function calculateFee(totalMinutes) { // מחשבת תשלום לפי משך בדקות
+            const days = Math.floor(totalMinutes / MINUTES_PER_DAY); // ימים מלאים
+            const restHours = Math.ceil((totalMinutes % MINUTES_PER_DAY) / 60); // שעות שנשארו, מעוגלות למעלה
+
+            let restFee = 0; // תשלום על השארית
+            if (restHours > 0) { // רק אם נשארו שעות
+                restFee = Math.min(FIRST_HOUR_FEE + (restHours - 1) * EXTRA_HOUR_FEE, DAILY_MAX_FEE); // שעה ראשונה + נוספות, עד המקסימום היומי
+            }
+            return days * DAILY_MAX_FEE + restFee; // ימים מלאים + שארית
+        }
+
+        document.getElementById('fee-rules').textContent = // כותב את שורת התעריפים...
+            `שעה ראשונה: ${FIRST_HOUR_FEE} ₪ · כל שעה נוספת (או חלק ממנה): ${EXTRA_HOUR_FEE} ₪ · מקסימום ליום: ${DAILY_MAX_FEE} ₪`; // ...מהקבועים, כדי שלא יהיו שני מקורות
+
+        document.getElementById('fee-form').addEventListener('submit', (event) => { // מאזין לשליחת הטופס
+            event.preventDefault(); // מונע טעינה מחדש של הדף
+            const hours = Number(document.getElementById('fee-hours').value); // שעות כמספר
+            const minutes = Number(document.getElementById('fee-minutes').value); // דקות כמספר
+            const fee = calculateFee(hours * 60 + minutes); // חישוב לפי סך הדקות
+            document.getElementById('fee-result').textContent = 'לתשלום: ' + fee + ' ₪'; // הצגת התוצאה
+        });
 
         // ---------- Start ----------
 
