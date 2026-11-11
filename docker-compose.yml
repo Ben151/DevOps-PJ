@@ -1,0 +1,22 @@
+services:
+  web:
+    build: ./web
+    ports:
+      - "8080:80"
+    networks:
+      - parking-net
+    depends_on:
+      - storage
+
+  storage:
+    build: ./storage
+    expose:
+      - "80"
+    volumes:
+      - ./license_plates:/usr/local/apache2/htdocs/plates:ro
+    networks:
+      - parking-net
+
+networks:
+  parking-net:
+    driver: bridge
